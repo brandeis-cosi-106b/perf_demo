@@ -58,8 +58,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass  # silence per-request noise; rely on startup message
 
 
+class _Server(http.server.HTTPServer):
+    allow_reuse_address = True
+
+
 if __name__ == "__main__":
-    server = http.server.HTTPServer((HOST, PORT), Handler)
+    server = _Server((HOST, PORT), Handler)
     print(f"Server listening on http://{HOST}:{PORT}  (Ctrl-C to stop)")
     try:
         server.serve_forever()

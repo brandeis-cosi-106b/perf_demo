@@ -109,76 +109,61 @@ uv run python3 measure.py memory
 
 ## Part 4 — Automated Measurement (~12 min)
 
-Run the full harness — all workloads in one pass — and generate the chart:
+Run the full harness and generate the chart:
 
 ```
 uv run python3 measure.py
 uv run python3 visualize.py
 ```
 
-`metrics.png` will be saved in the current directory.
+The left panel shows how much of wall time was actual CPU work vs waiting. The right panel shows peak memory. That large gray bar for the network workload — all that waiting — was completely invisible until we instrumented it. The tooling didn't change what the code does; it changed what we could see.
 
-Look at the chart. The left panel shows how much of wall time was actual CPU work vs waiting. The right panel shows peak memory.
-
-Notice what just happened: the I/O wait in the network workload was completely invisible until we instrumented it. The automation didn't speed anything up — it made the *category* of slow observable, which is a prerequisite for choosing the right fix.
+Most performance advice you'll find online assumes the bottleneck is CPU. These numbers suggest it usually isn't.
 
 **Discuss:**
 - Label each workload: CPU-bound, I/O-bound, or memory-bound. What single number in the table tells you?
-- `measure.py` is itself a piece of automation. Without it, how would you compare three workloads? What would you risk getting wrong?
+- Without `measure.py`, how would you compare these three? What would you risk getting wrong?
 
-### Going deeper: from "which workload?" to "which line?"
+### From "which workload?" to "which line?"
 
-`measure.py` told you *which workload* is slow. Now find out *why* — using `cProfile`, which is built into Python.
-
-Run this for the CPU workload:
+`measure.py` told you which workload is slow. `cProfile` (built into Python) tells you which function inside it costs the most.
 
 ```
-uv run python3 -m cProfile -s cumulative measure.py cpu
+uv run python3 -m cProfile -s tottime measure.py cpu
 ```
 
-Scan the output for `cpu_workload` and the functions called beneath it. Note the `cumtime` (cumulative time) column.
+The output has a lot of Python internals noise. Scroll past it and find the lines mentioning `workloads.py`. Look at the `tottime` column — time spent *inside* that function, not counting anything it calls.
 
-Now run the same for the memory workload:
-
-```
-uv run python3 -m cProfile -s cumulative measure.py memory
-```
-
-**Do:** Find the top three functions by cumulative time in each profile. What shows up in `memory_workload`'s profile that doesn't appear (or barely appears) in `cpu_workload`'s?
-
-That's actionable information: `cProfile` told you the specific function to look at. If you rewrote just that function, you'd know exactly what you were targeting.
-
-*(Optional — requires `uv sync --extra profiler`)* Scalene goes one level further: per-line CPU *and* memory, simultaneously.
+Now the same for the memory workload:
 
 ```
-uv run scalene measure.py
+uv run python3 -m cProfile -s tottime measure.py memory
 ```
 
-Find `cpu_workload` in the Scalene output. Now find `memory_workload`. Scalene will show you not just which function, but which line inside it is allocating memory.
+Find `workloads.py` again. How does `memory_workload`'s `tottime` compare to `cpu_workload`'s? That number is actionable — it tells you exactly which function to rewrite.
+
+*(Optional — requires `uv sync --extra profiler`)* Scalene goes one level further: a per-line breakdown of CPU *and* memory allocation simultaneously.
+
+```
+uv run scalene run --cli measure.py
+```
+
+Find `workloads.py` in the Scalene output. Look for lines with non-zero values in the Memory column. Scalene doesn't just tell you which function — it shows you which specific line is doing the allocating.
 
 **Discuss:**
-- `cProfile` → function. Scalene → line. Each layer of automation gives you more specific, more actionable information. What is the tradeoff as the tool gets more powerful?
-- McLuhan argued that every medium or tool reshapes the human capacities it extends — the car extends the leg but atrophies the walk. What capacity might increasingly powerful profilers extend, and what might they atrophy in the developer who relies on them?
+- `measure.py` → which workload. `cProfile` → which function. Scalene → which line. Each layer narrows the gap between "something is slow" and "change this exact thing." There's a McLuhan-ish question here: what might these increasingly specific tools be extending in the developer who uses them — and what might they be atrophying?
 
 ---
 
-## Part 5 — Reflection (~12 min)
+## Part 5 — Reflection (~10 min)
 
-These questions connect today's measurements to the broader course themes. You won't answer all of them — choose the ones that feel most alive.
+Pick a few of these — you won't get to all of them.
 
-**On tradeoffs:**
-- Is there any single change that improves all three metrics simultaneously, or do tradeoffs always appear?
-- For the network workload, the bottleneck is entirely inside the server — not in your code at all. Does it make sense to "optimize" this workload? Who owns the problem?
-
-**On measurement:**
-- Which metrics today were *directly measured* and which were *calculated from something else*?
-- `measure.py` measures wall time, CPU time, and memory. It does not measure energy use, developer comprehension time, fairness, or anything involving a human. The choice of what to instrument is itself a value judgment — it decides what counts as a problem. What does `measure.py` implicitly treat as not a problem?
+- For the network workload, the bottleneck is entirely inside the server — not in your code at all. Does it make sense to "optimize" this workload? Who actually owns the problem?
+- `measure.py` measures wall time, CPU time, and memory. It doesn't measure energy use, developer comprehension time, or anything involving a human. The choice of what to instrument is a value judgment — it decides what counts as a problem. What does `measure.py` treat as not a problem?
 - Could a program score well on all three metrics and still be a bad program? Describe one.
-
-**On efficiency as a goal:**
-- Jacques Ellul argued in *The Technological Society* that "technique" tends to pursue efficiency as an autonomous end, independent of whether efficiency serves human purposes. Do you see this tendency in how software engineers talk about performance?
-- What would it mean to measure efficiency at the level of the whole system — user, software, hardware, organization?
-- If a manager asked you to "make this code more efficient," what is the first question you should ask back?
+- Ellul argued in *The Technological Society* that technique tends to pursue efficiency as an end in itself, regardless of whether efficiency serves human purposes. Do you see that tendency in how engineers talk about performance?
+- If a manager asked you to "make this code more efficient," what's the first question you'd ask back?
 
 ---
 
@@ -193,4 +178,4 @@ These questions connect today's measurements to the broader course themes. You w
 | `uv run python3 measure.py` | Run all workloads |
 | `uv run python3 visualize.py` | Generate `metrics.png` |
 | `uv run python3 visualize.py --no-network` | Skip network workload |
-| `uv run scalene measure.py` | Line-level profiler (optional) |
+| `uv run scalene run --cli measure.py` | Line-level profiler (optional) |
