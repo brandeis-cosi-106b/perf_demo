@@ -1,7 +1,7 @@
 # Efficiency Lab — Automated Performance Measurement
 
 **Course:** Automation in Software Development  
-**Time:** ~50 minutes  
+**Time:** ~45 minutes  
 
 ---
 
@@ -47,7 +47,7 @@ Leave this terminal open for the rest of the lab.
 
 ---
 
-## Part 1 — CPU-Bound Work (~10 min)
+## Part 1 — CPU-Bound Work (~8 min)
 
 Read `cpu_workload()` in `workloads.py`. It parses 20,000 log lines with a regular expression and counts requests by HTTP status code.
 
@@ -63,15 +63,12 @@ You'll see three numbers: wall-clock time, CPU time, and their ratio.
 
 **Discuss:**
 - Why are CPU time and wall time nearly equal here?
-- If you wanted this to run faster, what would you change — the algorithm, the data structure, or something else?
 
 ---
 
-## Part 2 — I/O-Bound (Network) Work (~12 min)
+## Part 2 — I/O-Bound (Network) Work (~10 min)
 
 Read `network_workload()` in `workloads.py`. It makes 12 HTTP requests to `localhost:5001/logs`. Each request returns 100 log lines, but the server adds a **150 ms artificial delay** per request.
-
-Predict: will CPU time be close to wall time here?
 
 Run it (server must be running):
 
@@ -84,15 +81,12 @@ You'll see two rows — the slow endpoint and the fast one (no delay).
 **Discuss:**
 - Wall time is much larger than CPU time for the slow endpoint. What is the process doing during the gap?
 - The fast endpoint doesn't change the code — only the server delay disappears. What does that tell you about where the bottleneck was?
-- Could you reduce wall time for the slow endpoint without modifying `server.py`? How?
 
 ---
 
-## Part 3 — Memory-Heavy Work (~8 min)
+## Part 3 — Memory-Heavy Work (~7 min)
 
 Read `memory_workload()` in `workloads.py` side by side with `cpu_workload()`. Both process the same 20,000 lines and return the same result.
-
-Predict: which uses more peak memory, and by how much?
 
 Run it:
 
@@ -103,7 +97,6 @@ uv run python3 measure.py memory
 **Discuss:**
 - Find the specific line(s) in `memory_workload` that explain the higher memory usage.
 - The outputs are identical. If the outputs are the same, why does the implementation matter?
-- What happens to each workload if the dataset is 10× larger?
 
 ---
 
@@ -122,7 +115,6 @@ Most performance advice you'll find online assumes the bottleneck is CPU. These 
 
 **Discuss:**
 - Label each workload: CPU-bound, I/O-bound, or memory-bound. What single number in the table tells you?
-- Without `measure.py`, how would you compare these three? What would you risk getting wrong?
 
 ### From "which workload?" to "which line?"
 
@@ -155,13 +147,9 @@ Find `workloads.py` in the Scalene output. Look for lines with non-zero values i
 
 ---
 
-## Part 5 — Reflection (~10 min)
+## Part 5 — Reflection (~8 min)
 
-Pick a few of these — you won't get to all of them.
-
-- For the network workload, the bottleneck is entirely inside the server — not in your code at all. Does it make sense to "optimize" this workload? Who actually owns the problem?
 - `measure.py` measures wall time, CPU time, and memory. It doesn't measure energy use, developer comprehension time, or anything involving a human. The choice of what to instrument is a value judgment — it decides what counts as a problem. What does `measure.py` treat as not a problem?
-- Could a program score well on all three metrics and still be a bad program? Describe one.
 - Ellul argued in *The Technological Society* that technique tends to pursue efficiency as an end in itself, regardless of whether efficiency serves human purposes. Do you see that tendency in how engineers talk about performance?
 - If a manager asked you to "make this code more efficient," what's the first question you'd ask back?
 
