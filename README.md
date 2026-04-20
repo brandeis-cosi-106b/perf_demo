@@ -134,7 +134,13 @@ uv run python3 -m cProfile -s tottime measure.py memory
 
 Find `workloads.py` again. How does `memory_workload`'s `tottime` compare to `cpu_workload`'s? That number is actionable — it tells you exactly which function to rewrite.
 
-*(Optional — requires `uv sync --extra profiler`)* Scalene goes one level further: a per-line breakdown of CPU *and* memory allocation simultaneously.
+*(Optional)* Scalene goes one level further: a per-line breakdown of CPU *and* memory allocation simultaneously. Install it first if you haven't:
+
+```
+uv sync --extra profiler
+```
+
+Then run:
 
 ```
 uv run scalene run --cli measure.py
