@@ -10,13 +10,18 @@ help:
 	@echo "make server     run the log server yourself, in its own terminal"
 	@echo "make clean      remove profile files"
 
+# Uses the log server if one is already running (say, from `make server`);
+# otherwise starts one for this run and stops it afterwards.
+SERVER_UP = python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/status', timeout=1)" 2>/dev/null
+
 measure:
-	@python server.py & pid=$$!; \
-	for i in 1 2 3 4 5 6 7 8 9 10; do \
-	  python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/status')" 2>/dev/null && break; \
-	  sleep 0.3; \
-	done; \
-	python measure.py; status=$$?; kill $$pid 2>/dev/null; exit $$status
+	@if $(SERVER_UP); then \
+	  python measure.py; \
+	else \
+	  python server.py & pid=$$!; \
+	  for i in 1 2 3 4 5 6 7 8 9 10; do $(SERVER_UP) && break; sleep 0.3; done; \
+	  python measure.py; status=$$?; kill $$pid 2>/dev/null; exit $$status; \
+	fi
 
 server:
 	python server.py
