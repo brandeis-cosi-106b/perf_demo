@@ -1,0 +1,19 @@
+// Fa26: this lab reuses the HW5 dev image, pinned by digest. The lab needs only
+// Python 3.11, make, and memray, and HW5's image has all three, so students
+// with HW5 set up download nothing new.
+//
+// For course staff: this pairing holds for Fa26 only. If a later iteration
+// needs a tool the current HW image lacks, give the lab its own image again
+// (staff template: lecture_perf_tools/image_template/).
+{
+  "name": "COSI 106B - Efficiency lab",
+  "image": "ghcr.io/brandeis-cosi-106b/hw5-fa26@sha256:de1dadcb5d3cf8dcbf458deca91c543a775849c96c7303947f31f0ddd24dcd86",
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python"
+      ]
+    }
+  }
+}

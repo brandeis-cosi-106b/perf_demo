@@ -1,13 +1,25 @@
 [project]
 name = "efficiency-lab"
-version = "0.1.0"
-requires-python = ">=3.8"
-dependencies = [
+version = "0.2.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+# What students run. Fa26 uses the HW5 image, which already has this memray;
+# keep the pin equal to the image's if you keep that pairing.
+profilers = [
+    "memray==1.20.0",
+]
+# Front of the room only: scalene's line view and its AI optimizer.
+front = [
+    "scalene==2.2.1",
+]
+# Only visualize.py needs this. The chart is shown at the front, so the
+# student image leaves it out (it is about 130 MB).
+chart = [
     "matplotlib>=3.7",
 ]
 
-[project.optional-dependencies]
-profiler = [
-    "scalene>=1.5",
-]
-
+[tool.uv]
+# Resolve only releases at least two weeks older than the Fa26 build.
+exclude-newer = "2026-11-03T00:00:00Z"

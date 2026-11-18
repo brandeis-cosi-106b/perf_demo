@@ -1,11 +1,11 @@
 """
 Tiny localhost-only HTTP server for the network workload.
-Run in a separate terminal: python3 server.py
+Run in a separate terminal: python server.py (or make server)
 
 Endpoints:
-  /logs       — 100 log lines with 150 ms artificial delay
-  /logs/fast  — same payload, no delay
-  /status     — health check
+  /logs      : 100 log lines with 150 ms artificial delay
+  /logs/fast : same payload, no delay
+  /status    : health check
 """
 
 import http.server

@@ -20,7 +20,9 @@ from workloads import (
     network_workload_fast,
 )
 
-HEADER = f"{'Workload':<26} {'Wall (s)':>9} {'CPU (s)':>9} {'CPU/Wall':>9} {'Peak mem':>11}"
+HEADER = (
+    f"{'Workload':<26} {'Wall (s)':>9} {'CPU (s)':>9} {'CPU/Wall':>9} {'Peak mem':>11}"
+)
 RULE = "-" * len(HEADER)
 
 
@@ -59,7 +61,7 @@ def run_network():
         rows.append(measure("network (slow)", network_workload))
         rows.append(measure("network (fast)", network_workload_fast))
     except OSError as e:
-        print(f"  [network skipped — is server.py running?  {e}]")
+        print(f"  [network skipped. Is server.py running? {e}]")
     return rows
 
 

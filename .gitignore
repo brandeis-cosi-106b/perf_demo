@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 metrics.png
 scalene-profile.json
+cprofile.out
+memray.bin
+scalene-profile.html

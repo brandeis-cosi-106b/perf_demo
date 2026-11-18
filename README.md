@@ -1,175 +1,98 @@
-# Efficiency Lab — Automated Performance Measurement
+# Efficiency Lab: Measuring What Kind of Slow
 
-**Course:** Automation in Software Development  
-**Time:** ~45 minutes  
+COSI 106B, Fall 2026. About 45 minutes in class.
 
----
-
-## What this lab is about
-
-Three versions of the same program — parsing synthetic HTTP access logs — each stress a different resource. You'll measure all three automatically and compare the numbers. The goal is not to make everything faster; it's to understand *what kind of slow* each program is, and to notice that the measurement tools are themselves a form of automation.
-
----
+Three functions do the same job, counting HTTP status codes in a log, and each one leans on a different resource. You'll measure them, then point profilers at one of them and compare what each tool says.
 
 ## Files
 
-| File | Purpose |
+| File | What it is |
 |---|---|
-| `workloads.py` | Three log-analysis workloads |
-| `server.py` | Localhost HTTP server (needed for the network workload) |
-| `measure.py` | Automated measurement harness |
-| `visualize.py` | Generates a comparison chart |
+| `workloads.py` | The three workloads you'll measure |
+| `server.py` | A small log server on your own machine, for the network workload |
+| `measure.py` | A measurement harness: wall time, CPU time, peak memory |
+| `run.py` | Runs one workload with no harness around it (used in `EXPLORE.md`) |
+| `Makefile` | One short command per step (`make help` lists them) |
+| `EXPLORE.md` | Extra things to try after class |
 
----
+## Setup (before class)
 
-## Setup (~5 min)
+You need Docker Desktop running, as for the homeworks.
 
-**1.** Install [uv](https://docs.astral.sh/uv/) if you don't have it:
+1. Clone the repository:
+   ```
+   git clone https://github.com/brandeis-cosi-106b/perf_demo.git
+   ```
+2. Open the `perf_demo` folder in VS Code and choose **Reopen in Container** when asked (or run "Dev Containers: Reopen in Container" from the command palette). The lab uses the same image as HW5, so if you have HW5 set up there is nothing new to download.
+3. In the VS Code terminal, run:
+   ```
+   make measure
+   ```
+   If you see a table with four rows, you're set.
 
-```
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+Every tool is already installed in the container. You don't need to install anything with `pip` or `uv`.
 
-**2.** Install dependencies (creates a local `.venv` automatically):
+## 1. Predict (3 min)
 
-```
-uv sync
-```
+Read `cpu_workload`, `network_workload`, and `memory_workload` in `workloads.py`. Don't run anything yet.
 
-**3.** In a **second terminal**, start the localhost server:
+For each one, write down which resource you think it spends the most: CPU, waiting, or memory.
 
-```
-uv run python3 server.py
-```
-
-You should see: `Server listening on http://127.0.0.1:5001`  
-Leave this terminal open for the rest of the lab.
-
----
-
-## Part 1 — CPU-Bound Work (~8 min)
-
-Read `cpu_workload()` in `workloads.py`. It parses 20,000 log lines with a regular expression and counts requests by HTTP status code.
-
-Before running anything: **predict** — will CPU time be close to wall-clock time, or far apart?
-
-Run it:
+## 2. Measure (5 min)
 
 ```
-uv run python3 measure.py cpu
+make measure
 ```
 
-You'll see three numbers: wall-clock time, CPU time, and their ratio.
+This starts the log server, runs every workload once, and prints a table. `CPU/Wall` is the share of the wall-clock time the process spent computing.
 
-**Turn to a neighbor:**
-- Why are CPU time and wall time nearly equal here?
+**Turn to a neighbor:** which of your predictions did the table get wrong?
 
----
+## 3. The chart (at the front, 4 min)
 
-## Part 2 — I/O-Bound (Network) Work (~10 min)
+The instructor will put up a chart of the same numbers.
 
-Read `network_workload()` in `workloads.py`. It makes 12 HTTP requests to `localhost:5001/logs`. Each request returns 100 log lines, but the server adds a **150 ms artificial delay** per request.
-
-Run it (server must be running):
+## 4. Which function? (6 min)
 
 ```
-uv run python3 measure.py network
+make cprofile
 ```
 
-You'll see two rows — the slow endpoint and the fast one (no delay).
+cProfile is built into Python. It records every function call while `measure.py` runs the memory workload, then prints the 8 functions with the most `tottime` (time inside the function itself, not counting the functions it calls).
 
-**Turn to a neighbor:**
-- Wall time is much larger than CPU time for the slow endpoint. What is the process doing during the gap?
-- The fast endpoint doesn't change the code — only the server delay disappears. What does that tell you about where the bottleneck was?
+**Turn to a neighbor:** cProfile names a function. Which line inside `memory_workload` would you change first to lower its memory?
 
----
+## 5. Which line? (10 min)
 
-## Part 3 — Memory-Heavy Work (~7 min)
-
-Read `memory_workload()` in `workloads.py` side by side with `cpu_workload()`. Both process the same 20,000 lines and return the same result.
-
-Run it:
+Make the terminal panel as wide as you can first (drag its edge, or maximize it). memray's tree needs the room.
 
 ```
-uv run python3 measure.py memory
+make memray
 ```
 
-**Turn to a neighbor:**
-- Find the specific line(s) in `memory_workload` that explain the higher memory usage.
-- The outputs are identical. If the outputs are the same, why does the implementation matter?
+memray records every allocation while `measure.py` runs the memory workload. It prints its top 5 locations by size, then opens a tree of what was in memory at the peak. Find the lines from `workloads.py` in the tree (the arrow keys move around it). Press `q` to quit.
 
----
+**Turn to a neighbor:** memray's top 5 and its tree point to different lines in `memory_workload`. If your job were to lower peak memory, which line would you change?
 
-## Part 4 — Automated Measurement (~12 min)
+## 6. Another profiler, and an AI optimizer (at the front, 10 min)
 
-Run the full harness and generate the chart:
+The instructor will run a different profiler, scalene, on all the workloads, then use its built-in AI optimizer on `memory_workload` with a model running on the laptop.
 
-```
-uv run python3 measure.py
-uv run python3 visualize.py
-```
+## 7. Close (7 min)
 
-The left panel shows how much of wall time was actual CPU work vs waiting. The right panel shows peak memory. That large gray bar for the network workload — all that waiting — was completely invisible until we instrumented it. The tooling didn't change what the code does; it changed what we could see.
+`measure.py` counts time and memory. What does it treat as not a problem?
 
-Most performance advice you'll find online assumes the bottleneck is CPU. These numbers suggest it usually isn't.
+## After class
 
-**Turn to a neighbor:**
-- Label each workload: CPU-bound, I/O-bound, or memory-bound. What single number in the table tells you?
-
-### From "which workload?" to "which line?"
-
-`measure.py` told you which workload is slow. `cProfile` (built into Python) tells you which function inside it costs the most.
-
-```
-uv run python3 -m cProfile -s tottime measure.py cpu
-```
-
-The output has a lot of Python internals noise. Scroll past it and find the lines mentioning `workloads.py`. Look at the `tottime` column — time spent *inside* that function, not counting anything it calls.
-
-Now the same for the memory workload:
-
-```
-uv run python3 -m cProfile -s tottime measure.py memory
-```
-
-Find `workloads.py` again. How does `memory_workload`'s `tottime` compare to `cpu_workload`'s? That number is actionable — it tells you exactly which function to rewrite.
-
-*(Optional)* Scalene goes one level further: a per-line breakdown of CPU *and* memory allocation simultaneously. Install it first if you haven't:
-
-```
-uv sync --extra profiler
-```
-
-Then run:
-
-```
-uv run scalene run --cli measure.py
-```
-
-Find `workloads.py` in the Scalene output. Look for lines with non-zero values in the Memory column. Scalene doesn't just tell you which function — it shows you which specific line is doing the allocating.
-
-**Turn to a neighbor:**
-- `measure.py` → which workload. `cProfile` → which function. Scalene → which line. Each layer narrows the gap between "something is slow" and "change this exact thing." There's a McLuhan-ish question here: what might these increasingly specific tools be extending in the developer who uses them — and what might they be atrophying?
-
----
-
-## Part 5 — Reflection (~8 min)
-
-- `measure.py` measures wall time, CPU time, and memory. It doesn't measure energy use, developer comprehension time, or anything involving a human. The choice of what to instrument is a value judgment — it decides what counts as a problem. What does `measure.py` treat as not a problem?
-- Ellul argued in *The Technological Society* that technique tends to pursue efficiency as an end in itself, regardless of whether efficiency serves human purposes. Do you see that tendency in how engineers talk about performance?
-- If a manager asked you to "make this code more efficient," what's the first question you'd ask back?
-
----
+`EXPLORE.md` has the pieces we didn't have time for. Each one says what to run and what to look at.
 
 ## Quick reference
 
 | Command | What it does |
 |---|---|
-| `uv sync` | Install dependencies (matplotlib; run once) |
-| `uv sync --extra profiler` | Also install Scalene |
-| `uv run python3 server.py` | Start the localhost server (separate terminal) |
-| `uv run python3 measure.py [cpu\|network\|memory]` | Run one workload |
-| `uv run python3 measure.py` | Run all workloads |
-| `uv run python3 visualize.py` | Generate `metrics.png` |
-| `uv run python3 visualize.py --no-network` | Skip network workload |
-| `uv run scalene run --cli measure.py` | Line-level profiler (optional) |
+| `make measure` | All workloads: wall time, CPU time, peak memory |
+| `make cprofile` | cProfile on the memory workload |
+| `make memray` | memray on the memory workload (press `q` to leave the tree) |
+| `make server` | Run the log server yourself, in its own terminal |
+| `make clean` | Remove the profile files |
+| `python measure.py cpu` (or `memory`, `network`) | One workload (`network` needs the server running) |
